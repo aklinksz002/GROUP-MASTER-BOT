@@ -68,10 +68,10 @@ async def run():
     # Start the bot
     await app.start()
     logger.info("Bot started.")
-    
+
     # Keep the bot running using the appropriate method for Pyrogram 2.x
-    await app.run()  # This replaces await app.idle() for Pyrogram 2.x
-    logger.info("Bot idle...")
+    while True:
+        await asyncio.sleep(3600)  # Keep the bot running indefinitely
 
 if __name__ == "__main__":
     # Run the bot and web server in parallel
