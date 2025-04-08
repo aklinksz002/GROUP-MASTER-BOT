@@ -1,6 +1,6 @@
 from pyrogram import Client
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
-from config import config
+from bot.config import config
 from bot.scheduler.cleanup_jobs import schedule_cleanup_jobs
 from bot.handlers import admin_panel, broadcast, welcome_handler, rejoin_request
 from bot.helpers.db import init_db
