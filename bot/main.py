@@ -1,12 +1,17 @@
+import sys
+import os
+import asyncio
+import logging
 from pyrogram import Client
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from config import config
 from scheduler.cleanup_jobs import schedule_cleanup_jobs
 from handlers import admin_panel, broadcast, welcome_handler, rejoin_request
 from helpers.db import init_db
-from webserver import run_webserver
-import asyncio
-import logging
+from webserver import run_webserver  # Ensure webserver.py is in the same directory as this file
+
+# Add current directory to sys.path if needed (for import resolution)
+sys.path.append(os.path.abspath(os.path.dirname(__file__)))
 
 # Set up logging
 logging.basicConfig(level=logging.INFO)
