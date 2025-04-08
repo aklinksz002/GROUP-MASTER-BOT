@@ -5,3 +5,5 @@ motor
 pytz
 APScheduler
 aiohttp
+fastapi
+uvicorn
