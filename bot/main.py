@@ -7,6 +7,7 @@ from helpers.db import init_db
 from flask import Flask
 import asyncio
 import logging
+from threading import Thread
 
 # Set up logging
 logging.basicConfig(level=logging.INFO)
@@ -38,16 +39,9 @@ web_app = Flask(__name__)
 def home():
     return "Bot is running!"
 
-# Function to run the Flask web server
-async def run_webserver():
-    from threading import Thread
-
-    def run():
-        web_app.run(host='0.0.0.0', port=5000)  # Run the server on port 5000
-
-    thread = Thread(target=run)
-    thread.start()
-    logger.info("Web server started on port 5000.")
+# Function to run the Flask web server in a separate thread
+def run_webserver():
+    web_app.run(host='0.0.0.0', port=5000, use_reloader=False)  # Run the server on port 5000
 
 # Initialize the bot and run all setup tasks
 async def run():
@@ -67,17 +61,19 @@ async def run():
     scheduler.start()
     logger.info("Scheduler started.")
 
-    # Start the web server
-    await run_webserver()
+    # Start the web server in a separate thread to avoid blocking the event loop
+    loop = asyncio.get_event_loop()
+    loop.run_in_executor(None, run_webserver)  # Run the Flask app in a separate thread
 
-    # Keep the bot running
+    # Start the bot
     await app.start()
     logger.info("Bot started.")
+    
+    # Keep the bot running
     await app.idle()
+    logger.info("Bot idle...")
 
 if __name__ == "__main__":
+    # Run the bot and web server in parallel
     loop = asyncio.get_event_loop()
-
-    # Start the bot and web server in parallel
-    loop.create_task(run())  # Runs the bot and the tasks
-    loop.run_forever()
+    loop.run_until_complete(run())  # Run the bot and the tasks
