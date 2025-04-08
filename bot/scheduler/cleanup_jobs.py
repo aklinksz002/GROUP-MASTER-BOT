@@ -2,7 +2,7 @@ from pytz import timezone
 from apscheduler.triggers.cron import CronTrigger
 from pyrogram.errors import ChatAdminRequired
 from config import config
-from bot.helpers.db import get_db
+from helpers.db import get_db
 
 async def cleanup_group(app, group_id):
     db = get_db()
