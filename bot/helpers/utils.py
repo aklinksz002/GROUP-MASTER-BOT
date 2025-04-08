@@ -3,6 +3,7 @@ from helpers.db import get_db
 from datetime import datetime, timedelta
 from pyrogram import Client
 from pyrogram.errors import InviteHashExpired, UserAlreadyParticipant
+from pyrogram.types import Message
 
 # Get settings for a group
 async def get_group_settings(group_id):
@@ -79,3 +80,29 @@ async def get_user_stats(group_id: int, user_id: int):
     if not stats:
         return None
     return stats.get("members", {}).get(str(user_id))
+
+# Check if user is admin
+async def is_member_admin(client: Client, chat_id: int, user_id: int) -> bool:
+    try:
+        member = await client.get_chat_member(chat_id, user_id)
+        return member.status in ["administrator", "creator"]
+    except Exception:
+        return False
+
+# Format cleanup report message
+def generate_report_text(cleaned_members, total_count):
+    now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    lines = [f"🧹 **Daily Cleanup Report** ({now})"]
+    lines.append(f"Total Removed: {total_count}")
+    lines.append("")
+    for m in cleaned_members:
+        lines.append(f"• {m}")
+    return "\n".join(lines)
+
+# Delete join/leave system messages
+async def auto_delete_join_leave(client: Client, message: Message):
+    try:
+        if message.new_chat_members or message.left_chat_member:
+            await message.delete()
+    except:
+        pass
