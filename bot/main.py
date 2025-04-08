@@ -24,6 +24,7 @@ def register_handlers():
 # Run bot and scheduler
 async def run():
     await init_db()
+    await app.start()
     register_handlers()
     schedule_cleanup_jobs(app, scheduler)
     scheduler.start()
@@ -34,15 +35,13 @@ if __name__ == "__main__":
     import sys
     import os
 
-    # Fix import path so 'webserver' can be loaded
+    # Add root directory to path for importing webserver
     sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
-
-    from webserver import run_webserver  # make sure webserver.py is in root folder (same level as bot/)
+    from webserver import run_webserver
 
     loop = asyncio.get_event_loop()
 
-    # Start bot and web server in parallel
-    loop.create_task(app.start())
+    # Start bot and web server
     loop.create_task(run())
     loop.run_in_executor(None, run_webserver)
     loop.run_forever()
