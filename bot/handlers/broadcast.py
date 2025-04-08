@@ -3,7 +3,7 @@ from pyrogram.types import CallbackQuery, InlineKeyboardButton, InlineKeyboardMa
 from helpers.db import get_db
 from helpers.utils import generate_redirect_invite
 from datetime import datetime
-from bot.main import app  # Import the app instance from main.py
+from main import app  # Import the app instance from main.py
 
 # Callback handler for "Ask Join Link" button
 @app.on_callback_query(filters.regex('ask_join_link'))
