@@ -1,8 +1,9 @@
 from pyrogram import Client, filters
-from pyrogram.types import CallbackQuery
+from pyrogram.types import CallbackQuery, InlineKeyboardButton, InlineKeyboardMarkup
 from helpers.db import get_db
 from helpers.utils import generate_redirect_invite
-from pyrogram.types import InlineKeyboardButton, InlineKeyboardMarkup
+from datetime import datetime
+from bot.main import app  # Import the app instance from main.py
 
 # Callback handler for "Ask Join Link" button
 @app.on_callback_query(filters.regex('ask_join_link'))
