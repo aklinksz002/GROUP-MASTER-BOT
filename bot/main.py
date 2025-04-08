@@ -6,7 +6,13 @@ from handlers import admin_panel, broadcast, welcome_handler, rejoin_request
 from helpers.db import init_db
 from webserver import run_webserver
 import asyncio
+import logging
 
+# Set up logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
+# Initialize the bot client
 app = Client(
     name="cleanup_bot",
     api_id=config.API_ID,
@@ -14,6 +20,7 @@ app = Client(
     bot_token=config.BOT_TOKEN,
 )
 
+# Set up the scheduler
 scheduler = AsyncIOScheduler()
 
 # Register all handlers
@@ -23,19 +30,33 @@ def register_handlers():
     welcome_handler.register(app)
     rejoin_request.register(app)
 
-# Run bot and scheduler
+# Initialize the bot and run all setup tasks
 async def run():
+    # Initialize the database (create collections and indexes)
     await init_db()
+    logger.info("Database initialized.")
+
+    # Register all handlers
     register_handlers()
+    logger.info("Handlers registered.")
+
+    # Schedule the cleanup jobs
     schedule_cleanup_jobs(app, scheduler)
+    logger.info("Cleanup jobs scheduled.")
+
+    # Start the scheduler
     scheduler.start()
-    print("Bot started.")
+    logger.info("Scheduler started.")
+
+    # Keep the bot running
+    await app.start()
+    logger.info("Bot started.")
+    await app.idle()
 
 if __name__ == "__main__":
     loop = asyncio.get_event_loop()
 
-    # Start bot and web server in parallel
-    loop.create_task(app.start())
-    loop.create_task(run())
-    loop.run_in_executor(None, run_webserver)
+    # Start the bot and web server in parallel
+    loop.create_task(run())  # Runs the bot and the tasks
+    loop.create_task(run_webserver())  # Runs the web server
     loop.run_forever()
