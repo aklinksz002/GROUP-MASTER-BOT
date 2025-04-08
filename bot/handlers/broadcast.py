@@ -1,7 +1,7 @@
 from pyrogram import filters
 from pyrogram.types import Message
 from config import config
-from bot.helpers.db import get_db
+from helpers.db import get_db
 
 def register(app):
     @app.on_message(filters.command("broadcast") & filters.user(config.ADMIN_IDS))
