@@ -7,3 +7,4 @@ APScheduler
 aiohttp
 fastapi
 uvicorn
+flask
