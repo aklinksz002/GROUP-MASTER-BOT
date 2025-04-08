@@ -3,7 +3,7 @@ from pymongo import MongoClient
 from datetime import datetime, timedelta
 
 # MongoDB Client Setup
-client = MongoClient(config.MONGO_URI)
+client = MongoClient(config.MONGODB_URI)
 db = client.get_database()
 
 # Function to initialize the database (create collections if not exist)
