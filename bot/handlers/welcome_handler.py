@@ -1,47 +1,44 @@
-from pyrogram import filters
-from pyrogram.types import Message
+from pyrogram import Client, filters
+from pyrogram.types import Message, ChatMemberUpdated, InlineKeyboardMarkup, InlineKeyboardButton
 from config import config
 from helpers.db import get_db
-from helpers.utils import generate_redirect_invite
+from helpers.utils import generate_redirect_invite, get_group_settings, get_user_stats
 
-def register(app):
-    @app.on_message(filters.new_chat_members)
-    async def welcome_new_member(client, message: Message):
-        if message.chat.id not in config.GROUP_IDS:
+@Client.on_chat_member_updated(filters.group)
+async def handle_member_updates(client: Client, update: ChatMemberUpdated):
+    group_id = update.chat.id
+    user_id = update.new_chat_member.user.id
+
+    db = get_db()
+    settings = await get_group_settings(group_id)
+
+    # New member joined
+    if update.old_chat_member.status in ["left", "kicked"] and update.new_chat_member.status == "member":
+        if settings.get("welcome_enabled", True):
+            welcome_text = settings.get("welcome_text", f"Welcome {update.new_chat_member.user.mention}!")
+            await client.send_message(group_id, welcome_text)
+
+    # Member removed
+    elif update.old_chat_member.status == "member" and update.new_chat_member.status in ["left", "kicked"]:
+        if update.old_chat_member.user.is_bot:
             return
 
-        db = get_db()
-        settings = await db.settings.find_one({"group_id": message.chat.id}) or {}
-        welcome_msg = settings.get("welcome_message", "Welcome to the group!")
+        # Send private rejoin link if enabled
+        if settings.get("rejoin_enabled", True):
+            redirect_link = await generate_redirect_invite(client, group_id)
+            try:
+                await client.send_message(
+                    user_id,
+                    f"You've been removed from {update.chat.title}. Tap below to rejoin (valid for 24 hours):",
+                    reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("Rejoin", url=redirect_link)]])
+                )
+            except Exception:
+                pass
 
-        for user in message.new_chat_members:
-            if not user.is_bot:
-                await message.reply_text(f"{user.mention}, {welcome_msg}")
-
-    @app.on_message(filters.command("setwelcome") & filters.user(config.ADMIN_IDS))
-    async def set_welcome(client, message: Message):
-        db = get_db()
-        new_msg = message.text.split(None, 1)[1] if len(message.command) > 1 else None
-        if not new_msg:
-            return await message.reply("Send a message like:\n`/setwelcome Welcome to the group!`")
-
-        await db.settings.update_one(
-            {"group_id": message.chat.id},
-            {"$set": {"welcome_message": new_msg}},
-            upsert=True
-        )
-        await message.reply("✅ Welcome message updated!")
-
-    @app.on_message(filters.command("setremove") & filters.user(config.ADMIN_IDS))
-    async def set_removal_message(client, message: Message):
-        db = get_db()
-        new_msg = message.text.split(None, 1)[1] if len(message.command) > 1 else None
-        if not new_msg:
-            return await message.reply("Usage:\n`/setremove You've been removed. Click below to rejoin.`")
-
-        await db.settings.update_one(
-            {"group_id": message.chat.id},
-            {"$set": {"remove_message": new_msg}},
-            upsert=True
-        )
-        await message.reply("✅ Removal message updated!")
+        # Custom removal message
+        if settings.get("removal_msg_enabled", True):
+            removal_text = settings.get("removal_text", "You have been removed.")
+            try:
+                await client.send_message(user_id, removal_text)
+            except Exception:
+                pass
