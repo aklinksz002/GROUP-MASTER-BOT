@@ -8,7 +8,7 @@ class Config:
     API_HASH = os.getenv("API_HASH", "")
     BOT_TOKEN = os.getenv("BOT_TOKEN", "")
     MONGODB_URI = os.getenv("MONGODB_URI", "")
-    ADMIN_ID = int(os.getenv("ADMIN_ID", ""))  # Your Telegram user ID
+    ADMIN_IDS = os.getenv("ADMIN_IDS", "")  # Your Telegram user ID
     GROUP_IDS = os.getenv("GROUP_IDS", "").split(",")  # Comma-separated list of group IDs
     REDIRECT_BASE = os.getenv("REDIRECT_BASE")
     TIMEZONE = os.getenv("TIMEZONE", "Asia/Kolkata")
