@@ -10,4 +10,4 @@ def root():
 
 def run_webserver():
     port = int(os.environ.get("PORT", 10000))
-    uvicorn.run("webserver:app", host="0.0.0.0", port=port, reload=False)
+    uvicorn.run("webserver:app", host="0.0.0.0", port=port)
