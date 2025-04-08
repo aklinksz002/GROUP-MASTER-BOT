@@ -4,7 +4,7 @@ from config import config
 from scheduler.cleanup_jobs import schedule_cleanup_jobs
 from handlers import admin_panel, broadcast, welcome_handler, rejoin_request
 from helpers.db import init_db
-from webserver import run_webserver
+from flask import Flask
 import asyncio
 import logging
 
@@ -26,9 +26,28 @@ scheduler = AsyncIOScheduler()
 # Register all handlers
 def register_handlers():
     admin_panel.register(app)
-    broadcast.register(app)  # Ensure 'broadcast.register' is defined properly
+    broadcast.register(app)
     welcome_handler.register(app)
     rejoin_request.register(app)
+
+# Initialize Flask (web server)
+web_app = Flask(__name__)
+
+# Simple route for web server
+@web_app.route("/")
+def home():
+    return "Bot is running!"
+
+# Function to run the Flask web server
+async def run_webserver():
+    from threading import Thread
+
+    def run():
+        web_app.run(host='0.0.0.0', port=5000)  # Run the server on port 5000
+
+    thread = Thread(target=run)
+    thread.start()
+    logger.info("Web server started on port 5000.")
 
 # Initialize the bot and run all setup tasks
 async def run():
@@ -48,22 +67,17 @@ async def run():
     scheduler.start()
     logger.info("Scheduler started.")
 
+    # Start the web server
+    await run_webserver()
+
     # Keep the bot running
     await app.start()
     logger.info("Bot started.")
     await app.idle()
 
-# This part runs the bot and webserver
-async def start_services():
-    # Start the bot
-    await run()
-
-    # Start the web server
-    await run_webserver()
-
 if __name__ == "__main__":
     loop = asyncio.get_event_loop()
 
-    # Start bot and web server in parallel
-    loop.create_task(start_services())  # Run both bot and web server concurrently
+    # Start the bot and web server in parallel
+    loop.create_task(run())  # Runs the bot and the tasks
     loop.run_forever()
