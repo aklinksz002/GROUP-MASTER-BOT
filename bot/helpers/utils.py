@@ -1,5 +1,6 @@
+from pyrogram import Client  # Import Client from pyrogram
 from datetime import datetime, timedelta
-from helpers.db import get_db
+from helpers.db import get_db  # Ensure this function is correctly defined
 
 # Get settings for a group
 async def get_group_settings(group_id):
