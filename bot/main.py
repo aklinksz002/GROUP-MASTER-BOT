@@ -1,18 +1,12 @@
-import sys
-import os
-import logging
-import asyncio
 from pyrogram import Client
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from config import config
 from scheduler.cleanup_jobs import schedule_cleanup_jobs
 from handlers import admin_panel, broadcast, welcome_handler, rejoin_request
 from helpers.db import init_db
-import uvicorn
-from fastapi import FastAPI
-
-# Adjust the system path to include the parent directory (if necessary)
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+from webserver import run_webserver
+import asyncio
+import logging
 
 # Set up logging
 logging.basicConfig(level=logging.INFO)
@@ -32,21 +26,9 @@ scheduler = AsyncIOScheduler()
 # Register all handlers
 def register_handlers():
     admin_panel.register(app)
-    broadcast.register(app)
+    broadcast.register(app)  # Ensure 'broadcast.register' is defined properly
     welcome_handler.register(app)
     rejoin_request.register(app)
-
-# Web server setup (FastAPI)
-web_app = FastAPI()
-
-@web_app.get("/")
-def root():
-    return {"status": "Bot is running!"}
-
-# Run the web server using uvicorn
-async def run_webserver():
-    port = int(os.environ.get("PORT", 10000))
-    uvicorn.run(web_app, host="0.0.0.0", port=port)
 
 # Initialize the bot and run all setup tasks
 async def run():
@@ -71,10 +53,17 @@ async def run():
     logger.info("Bot started.")
     await app.idle()
 
+# This part runs the bot and webserver
+async def start_services():
+    # Start the bot
+    await run()
+
+    # Start the web server
+    await run_webserver()
+
 if __name__ == "__main__":
     loop = asyncio.get_event_loop()
 
-    # Start the bot and web server in parallel
-    loop.create_task(run())  # Runs the bot and the tasks
-    loop.create_task(run_webserver())  # Runs the web server
+    # Start bot and web server in parallel
+    loop.create_task(start_services())  # Run both bot and web server concurrently
     loop.run_forever()
