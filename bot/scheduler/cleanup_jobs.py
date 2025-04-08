@@ -3,6 +3,7 @@ from pyrogram import Client
 from helpers.db import get_db
 from helpers.utils import remove_inactive_members, get_group_settings, generate_redirect_invite
 from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton
+from datetime import datetime
 
 async def cleanup_job(app: Client, group_id: int):
     db = get_db()
@@ -15,10 +16,9 @@ async def cleanup_job(app: Client, group_id: int):
 
     for user_id in removed_users:
         try:
-            # Send message to each removed user with Ask Join Link button
             await app.send_message(
                 user_id,
-                f"You have been removed from the group. You can request a join link below.",
+                "You have been removed from the group. You can request a join link below.",
                 reply_markup=InlineKeyboardMarkup([
                     [InlineKeyboardButton("Ask Join Link", callback_data=f"ask_join_link_{group_id}")]
                 ])
@@ -26,14 +26,14 @@ async def cleanup_job(app: Client, group_id: int):
         except Exception as e:
             print(f"Failed to message removed user {user_id}: {e}")
 
-    # Store report in DB
+    # Store cleanup report
     await db.reports.insert_one({
         "group_id": group_id,
         "removed_users": removed_users,
-        "timestamp": settings.get("last_cleanup", None)
+        "timestamp": datetime.utcnow()
     })
 
-    # Send report to admins
+    # Notify admins
     admins = settings.get("admins", [])
     if not admins:
         async for admin in app.get_chat_members(group_id, filter="administrators"):
@@ -52,19 +52,25 @@ async def cleanup_job(app: Client, group_id: int):
             print(f"Couldn't send report to {admin_id}: {e}")
 
 def schedule_cleanup_jobs(app: Client, scheduler):
+    from asyncio import create_task
     db = get_db()
 
     async def setup_jobs():
-        groups = await db.settings.find({}).to_list(length=1000)
-        for group in groups:
-            group_id = group["group_id"]
-            scheduler.add_job(
-                cleanup_job,
-                CronTrigger(hour=0, minute=0),  # Runs at 12:00 AM IST
-                args=[app, group_id],
-                id=f"cleanup_{group_id}",
-                replace_existing=True
-            )
+        try:
+            cursor = db.settings.find({})
+            groups = await cursor.to_list(length=1000)
 
-    import asyncio
-    asyncio.create_task(setup_jobs())
+            for group in groups:
+                group_id = group.get("group_id")
+                if group_id:
+                    scheduler.add_job(
+                        cleanup_job,
+                        CronTrigger(hour=0, minute=0, timezone="Asia/Kolkata"),
+                        args=[app, group_id],
+                        id=f"cleanup_{group_id}",
+                        replace_existing=True
+                    )
+        except Exception as e:
+            print(f"Failed to schedule cleanup jobs: {e}")
+
+    create_task(setup_jobs())
