@@ -1,21 +1,27 @@
-from pytz import timezone
-from apscheduler.triggers.cron import CronTrigger
-from pyrogram.errors import ChatAdminRequired
+# bot/scheduler/cleanup_jobs.py
+
+from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from config import config
 from helpers.db import get_db
+from helpers.utils import remove_inactive_members
 
-async def cleanup_group(app, group_id):
-    db = get_db()
-    members = await app.get_chat_members(group_id)
-    for member in members:
-        if not member.user.is_bot and not member.status in ("administrator", "creator"):
+scheduler = AsyncIOScheduler()
+
+def schedule_cleanup_jobs(app):
+    import asyncio
+    from pyrogram.errors import FloodWait
+
+    @scheduler.scheduled_job("cron", hour=0, minute=0, timezone="Asia/Kolkata")
+    async def daily_cleanup():
+        db = get_db()
+        groups = db.groups.find()
+        async for group in groups:
+            group_id = group["_id"]
             try:
-                await app.kick_chat_member(group_id, member.user.id)
-                await app.send_message(member.user.id, "You’ve been removed. Rejoin using the invite link sent below.")
-            except:
-                pass
+                await remove_inactive_members(app, group_id)
+            except FloodWait as e:
+                await asyncio.sleep(e.value)
+            except Exception as ex:
+                print(f"[Cleanup Error] Group: {group_id} — {ex}")
 
-def schedule_cleanup(scheduler, app):
-    trigger = CronTrigger(hour=0, minute=0, timezone=timezone("Asia/Kolkata"))
-    for group_id in config.GROUP_IDS:
-        scheduler.add_job(cleanup_group, trigger, args=[app, group_id])
+    scheduler.start()
