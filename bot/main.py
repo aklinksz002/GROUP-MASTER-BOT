@@ -1,18 +1,13 @@
-import sys
-import os
-import asyncio
-import logging
 from pyrogram import Client
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from config import config
 from scheduler.cleanup_jobs import schedule_cleanup_jobs
 from handlers import admin_panel, broadcast, welcome_handler, rejoin_request
 from helpers.db import init_db
-
-# Ensure the root directory is in the Python path
-sys.path.append(os.path.abspath(os.path.dirname(__file__)))
-
-from webserver import run_webserver  # This should now work
+from webserver import run_webserver
+import asyncio
+import logging
+import os
 
 # Set up logging
 logging.basicConfig(level=logging.INFO)
@@ -61,6 +56,9 @@ async def run():
 
 if __name__ == "__main__":
     loop = asyncio.get_event_loop()
+
+    # Check and print the current working directory for debugging
+    print("Current working directory:", os.getcwd())
 
     # Start the bot and web server in parallel
     loop.create_task(run())  # Runs the bot and the tasks
