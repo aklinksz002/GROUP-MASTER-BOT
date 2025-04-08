@@ -31,7 +31,13 @@ async def run():
 
 if __name__ == "__main__":
     import asyncio
-    from webserver import run_webserver
+    import sys
+    import os
+
+    # Fix import path so 'webserver' can be loaded
+    sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+
+    from webserver import run_webserver  # make sure webserver.py is in root folder (same level as bot/)
 
     loop = asyncio.get_event_loop()
 
