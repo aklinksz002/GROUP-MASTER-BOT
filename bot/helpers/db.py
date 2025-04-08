@@ -2,22 +2,21 @@ from config import config
 from pymongo import MongoClient
 from datetime import datetime, timedelta
 
-# MongoDB Client Setup
+# MongoDB Client Setup with default database
 client = MongoClient(config.MONGODB_URI)
-db = client.get_database()
+db = client.cleanup_bot  # Ensure to specify the database name here
 
 # Function to initialize the database (create collections if not exist)
 async def init_db():
-    # Create indexes for better performance
-    await db.reports.create_index([("group_id", 1)])
-    await db.reports.create_index([("report_date", -1)])
+    db.reports.create_index("group_id")
+    db.reports.create_index("report_date")
 
-    await db.stats.create_index([("group_id", 1)])
-    await db.invites.create_index([("group_id", 1)])
-    await db.settings.create_index([("group_id", 1)])
+    db.stats.create_index("group_id")
+    db.invites.create_index("group_id")
+    db.settings.create_index("group_id")
 
-    await db.user_activity.create_index([("user_id", 1)])
-    await db.user_activity.create_index([("group_id", 1)])
+    db.user_activity.create_index("user_id")
+    db.user_activity.create_index("group_id")
 
 # Save report to the database
 async def save_report(group_id, admin_id, report_type, report_data):
@@ -48,10 +47,8 @@ async def generate_redirect_invite(client, group_id):
             return f"https://aklinksz1206.blogspot.com/2025/01/waiting-page.html?{invite_link}"
 
     try:
-        # Generate a new invite link that expires in 24 hours and limits to 1 user
         invite = await client.create_chat_invite_link(group_id, expire_date=datetime.utcnow() + timedelta(hours=24), member_limit=1)
         new_link = invite.invite_link
-        # Update the invite link in the database
         await collection.update_one(
             {"group_id": group_id},
             {"$set": {"invite_link": new_link, "expire_at": datetime.utcnow() + timedelta(hours=24)}},
