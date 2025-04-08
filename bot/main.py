@@ -8,10 +8,11 @@ from config import config
 from scheduler.cleanup_jobs import schedule_cleanup_jobs
 from handlers import admin_panel, broadcast, welcome_handler, rejoin_request
 from helpers.db import init_db
-from webserver import run_webserver  # Ensure webserver.py is in the same directory as this file
 
-# Add current directory to sys.path if needed (for import resolution)
+# Ensure the root directory is in the Python path
 sys.path.append(os.path.abspath(os.path.dirname(__file__)))
+
+from webserver import run_webserver  # This should now work if webserver.py is in the same directory
 
 # Set up logging
 logging.basicConfig(level=logging.INFO)
