@@ -1,7 +1,7 @@
 from pyrogram import filters
 from pyrogram.types import CallbackQuery, InlineKeyboardMarkup, InlineKeyboardButton
 from config import config
-from bot.helpers.db import get_db
+from helpers.db import get_db
 
 def register(app):
     @app.on_callback_query(filters.regex("rejoin_request"))
