@@ -18,6 +18,10 @@ async def init_db():
     db.user_activity.create_index("user_id")
     db.user_activity.create_index("group_id")
 
+# Function to get the database object (for other modules to use)
+def get_db():
+    return db
+
 # Save report to the database
 async def save_report(group_id, admin_id, report_type, report_data):
     report = {
