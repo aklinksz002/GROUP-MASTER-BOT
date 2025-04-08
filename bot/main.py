@@ -69,8 +69,8 @@ async def run():
     await app.start()
     logger.info("Bot started.")
     
-    # Keep the bot running
-    await app.idle()
+    # Keep the bot running using the appropriate method for Pyrogram 2.x
+    await app.run()  # This replaces await app.idle() for Pyrogram 2.x
     logger.info("Bot idle...")
 
 if __name__ == "__main__":
