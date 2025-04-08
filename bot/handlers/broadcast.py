@@ -21,7 +21,7 @@ async def ask_join_link(client: Client, callback_query: CallbackQuery):
     )
 
     # Optionally, log or track user actions
-    db = get_db()
+    db = await get_db()  # Make sure to await the database connection if it's async
     await db.user_activity.insert_one({
         "user_id": user_id,
         "group_id": group_id,
