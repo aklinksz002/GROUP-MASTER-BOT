@@ -1,12 +1,16 @@
+# bot/helpers/db.py
+
 from motor.motor_asyncio import AsyncIOMotorClient
 from config import config
 
-db = None
+_db = None
 
 async def connect_db():
-    global db
+    global _db
     client = AsyncIOMotorClient(config.MONGO_URI)
-    db = client["cleanup_bot"]
+    _db = client["cleanup_bot"]
 
 def get_db():
-    return db
+    if _db is None:
+        raise RuntimeError("Database not connected. Call connect_db() first.")
+    return _db
