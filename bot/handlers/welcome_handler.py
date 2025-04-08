@@ -1,8 +1,8 @@
 from pyrogram import filters
 from pyrogram.types import Message
 from config import config
-from bot.helpers.db import get_db
-from bot.helpers.utils import generate_redirect_invite
+from helpers.db import get_db
+from helpers.utils import generate_redirect_invite
 
 def register(app):
     @app.on_message(filters.new_chat_members)
