@@ -1,67 +1,70 @@
-import pytz
 from apscheduler.triggers.cron import CronTrigger
-from pyrogram.types import ChatMemberUpdated, Message
-from datetime import datetime, timedelta
-from helpers.utils import get_admin_ids, is_member_admin
+from pyrogram import Client
 from helpers.db import get_db
-from config import config
+from helpers.utils import remove_inactive_members, get_group_settings, generate_redirect_invite
+from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 
-IST = pytz.timezone("Asia/Kolkata")
-
-async def remove_inactive_members(app, chat_id):
+async def cleanup_job(app: Client, group_id: int):
     db = get_db()
-    removed_users = []
-    admin_ids = await get_admin_ids(app, chat_id)
+    settings = await get_group_settings(group_id)
 
-    async for member in app.get_chat_members(chat_id):
-        user_id = member.user.id
-        if user_id in admin_ids:
-            continue
+    if settings.get("silent_mode"):
+        return  # Skip cleanup in silent mode
+
+    removed_users = await remove_inactive_members(app, group_id)
+
+    for user_id in removed_users:
         try:
-            await app.kick_chat_member(chat_id, user_id)
-            removed_users.append(user_id)
-        except Exception as e:
-            print(f"[ERROR] Failed to remove {user_id}: {e}")
-
-    # Log cleanup
-    if removed_users:
-        await db.cleanups.insert_one({
-            "group_id": chat_id,
-            "removed_users": removed_users,
-            "timestamp": datetime.now(IST)
-        })
-    return removed_users
-
-async def send_daily_report(app, chat_id, removed_users):
-    if not removed_users:
-        return
-    admin_ids = await get_admin_ids(app, chat_id)
-    for admin_id in admin_ids:
-        try:
+            # Send message to each removed user with Ask Join Link button
             await app.send_message(
-                admin_id,
-                f"**Daily Cleanup Report** for `{chat_id}`\n"
-                f"Removed {len(removed_users)} members at 12 AM."
+                user_id,
+                f"You have been removed from the group. You can request a join link below.",
+                reply_markup=InlineKeyboardMarkup([
+                    [InlineKeyboardButton("Ask Join Link", callback_data=f"ask_join_link_{group_id}")]
+                ])
             )
-        except:
-            pass
+        except Exception as e:
+            print(f"Failed to message removed user {user_id}: {e}")
 
-def schedule_cleanup_jobs(app, scheduler):
-    @app.on_chat_member_updated()
-    async def handle_join_leave(_, member: ChatMemberUpdated):
-        # auto delete join/leave messages handled elsewhere
-        pass
+    # Store report in DB
+    await db.reports.insert_one({
+        "group_id": group_id,
+        "removed_users": removed_users,
+        "timestamp": settings.get("last_cleanup", None)
+    })
 
-    async def daily_cleanup():
-        db = get_db()
-        groups = await db.groups.find().to_list(None)
+    # Send report to admins
+    admins = settings.get("admins", [])
+    if not admins:
+        async for admin in app.get_chat_members(group_id, filter="administrators"):
+            admins.append(admin.user.id)
+
+    report_text = f"**Daily Cleanup Report** for group `{group_id}`\n"
+    report_text += f"Total Removed: `{len(removed_users)}`\n\n"
+    if removed_users:
+        report_text += "Removed User IDs:\n"
+        report_text += "\n".join([f"`{uid}`" for uid in removed_users])
+
+    for admin_id in admins:
+        try:
+            await app.send_message(admin_id, report_text)
+        except Exception as e:
+            print(f"Couldn't send report to {admin_id}: {e}")
+
+def schedule_cleanup_jobs(app: Client, scheduler):
+    db = get_db()
+
+    async def setup_jobs():
+        groups = await db.settings.find({}).to_list(length=1000)
         for group in groups:
-            chat_id = group["chat_id"]
-            removed_users = await remove_inactive_members(app, chat_id)
-            await send_daily_report(app, chat_id, removed_users)
+            group_id = group["group_id"]
+            scheduler.add_job(
+                cleanup_job,
+                CronTrigger(hour=0, minute=0),  # Runs at 12:00 AM IST
+                args=[app, group_id],
+                id=f"cleanup_{group_id}",
+                replace_existing=True
+            )
 
-    scheduler.add_job(
-        daily_cleanup,
-        CronTrigger(hour=0, minute=0, timezone=IST),
-        name="Daily Group Cleanup"
-    )
+    import asyncio
+    asyncio.create_task(setup_jobs())
