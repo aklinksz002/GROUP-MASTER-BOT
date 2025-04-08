@@ -12,7 +12,7 @@ from helpers.db import init_db
 # Ensure the root directory is in the Python path
 sys.path.append(os.path.abspath(os.path.dirname(__file__)))
 
-from webserver import run_webserver  # This should now work if webserver.py is in the same directory
+from webserver import run_webserver  # This should now work
 
 # Set up logging
 logging.basicConfig(level=logging.INFO)
